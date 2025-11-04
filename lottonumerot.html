@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lotto & Eurojackpot -arpoja (paikallinen)</title>
+  <style>
+    :root{
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+      --bg:#0b1736;
+      --card:#1d2552;
+      --accent:#7f5af0;
+      --pink:#ff6fb5;
+      --text:#f4f6ff;
+    }
+    body{margin:20px;background:var(--bg);color:var(--text)}
+    .app{max-width:760px;margin:0 auto}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    h1{font-size:18px;margin:0}
+    p.lead{margin:0;color:#cbd3ff;font-size:13px}
+    .controls{display:flex;gap:10px;margin:14px 0}
+    button{border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600;color:white;transition:opacity .2s}
+    button:hover{opacity:0.9}
+    button.primary{background:var(--accent)}
+    #btn-clear{background:var(--pink)}
+    .rows{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+    .row{display:flex;align-items:center;gap:12px;background:var(--card);padding:10px;border-radius:10px;border:1px solid #2f3975}
+    .type{min-width:120px;font-weight:600;color:#fff}
+    .numbers{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{padding:8px 10px;border-radius:999px;background:#2f3975;color:#fff;min-width:36px;text-align:center;font-weight:700}
+    .star{background:#02b3a7;color:#000}
+    .trash{margin-left:auto;background:transparent;border:0;font-size:18px;cursor:pointer;color:#ff6fb5}
+    .hint{font-size:13px;color:#cbd3ff;margin-top:8px}
+    footer{margin-top:16px;color:#aaa;font-size:13px}
+    @media (max-width:520px){.type{min-width:90px}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>Lotto & Eurojackpot</h1>
+      </div>
+    </header>
+
+    <div class="controls">
+      <button id="btn-lotto" class="primary">Lotto</button>
+      <button id="btn-euro" class="primary">Eurojackpot</button>
+      <button id="btn-clear">Reset</button>
+    </div>
+
+
+    <div id="rows" class="rows" aria-live="polite"></div>
+
+    <footer>
+    </footer>
+  </div>
+
+  <script>
+    const rowsEl = document.getElementById('rows');
+    const btnLotto = document.getElementById('btn-lotto');
+    const btnEuro = document.getElementById('btn-euro');
+    const btnClear = document.getElementById('btn-clear');
+
+    function randInt(min, max){
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function uniqueRandoms(count, min, max){
+      const set = new Set();
+      const range = max - min + 1;
+      if(count > range) throw new Error('Liikaa pyydettyjä numeroita suhteessa väliin');
+      while(set.size < count){
+        set.add(randInt(min, max));
+      }
+      return Array.from(set).sort((a,b)=>a-b);
+    }
+
+    function makeChip(text, extraClass=''){
+      const span = document.createElement('span');
+      span.className = 'chip ' + extraClass;
+      span.textContent = text;
+      return span;
+    }
+
+    function addRow(type, mainNumbers, stars){
+      const row = document.createElement('div');
+      row.className = 'row';
+
+      const typeEl = document.createElement('div');
+      typeEl.className = 'type';
+      typeEl.textContent = type;
+      row.appendChild(typeEl);
+
+      const nums = document.createElement('div');
+      nums.className = 'numbers';
+
+      mainNumbers.forEach(n=>nums.appendChild(makeChip(n)));
+
+      if(Array.isArray(stars) && stars.length){
+        const sep = document.createElement('div');
+        sep.style.width = '8px';
+        nums.appendChild(sep);
+        stars.forEach(s=>nums.appendChild(makeChip(s, 'star')));
+      }
+
+      row.appendChild(nums);
+
+      const del = document.createElement('button');
+      del.className = 'trash';
+      del.setAttribute('title','Poista rivi');
+      del.textContent = '✖';
+      del.addEventListener('click', ()=>{
+        row.remove();
+      });
+      row.appendChild(del);
+
+      rowsEl.prepend(row);
+    }
+
+    btnLotto.addEventListener('click', ()=>{
+      try{
+        const numbers = uniqueRandoms(7,1,40);
+        addRow('Lotto', numbers, []);
+      }catch(e){
+        alert(e.message);
+      }
+    });
+
+    btnEuro.addEventListener('click', ()=>{
+      try{
+        const main = uniqueRandoms(5,1,50);
+        const stars = uniqueRandoms(2,1,12);
+        addRow('Eurojackpot', main, stars);
+      }catch(e){
+        alert(e.message);
+      }
+    });
+
+    btnClear.addEventListener('click', ()=>{
+      if(confirm('Poistetaanko kaikki arvotut rivit?')) rowsEl.innerHTML = '';
+    });
+
+    function saveRows(){
+      const data = [];
+      document.querySelectorAll('#rows .row').forEach(r=>{
+        const type = r.querySelector('.type').textContent;
+        const chips = Array.from(r.querySelectorAll('.numbers .chip'));
+        const main = chips.filter(c=>!c.classList.contains('star')).map(c=>Number(c.textContent));
+        const stars = chips.filter(c=>c.classList.contains('star')).map(c=>Number(c.textContent));
+        data.push({type, main, stars});
+      });
+      localStorage.setItem('arvotutRivit_v1', JSON.stringify(data));
+    }
+
+    function loadRows(){
+      const raw = localStorage.getItem('arvotutRivit_v1');
+      if(!raw) return;
+      try{
+        const arr = JSON.parse(raw);
+        arr.forEach(item=>addRow(item.type, item.main, item.stars));
+      }catch(e){
+        console.warn('Ei voitu lukea tallennettua sisältöä',e);
+      }
+    }
+
+    const observer = new MutationObserver(saveRows);
+    observer.observe(rowsEl, {childList:true, subtree:true});
+
+    loadRows();
+
+  </script>
+</body>
+</html>
