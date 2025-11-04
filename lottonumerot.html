@@ -33,6 +33,55 @@
     .hint{font-size:13px;color:#cbd3ff;margin-top:8px}
     footer{margin-top:16px;color:#aaa;font-size:13px}
     @media (max-width:520px){.type{min-width:90px}}
+
+    /* Popup-tyylit */
+    .popup-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .popup {
+      background: var(--card);
+      padding: 20px 24px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 0 15px rgba(0,0,0,0.4);
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn {
+      from {opacity: 0; transform: scale(0.95);}
+      to {opacity: 1; transform: scale(1);}
+    }
+
+    .popup p {
+      margin-bottom: 18px;
+      font-size: 16px;
+      color: var(--text);
+    }
+
+    .popup-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .popup-buttons button {
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #fff;
+    }
+
+    #popup-ok { background: var(--pink); }
+    #popup-cancel { background: #444a88; }
   </style>
 </head>
 <body>
@@ -49,11 +98,20 @@
       <button id="btn-clear">Reset</button>
     </div>
 
-
     <div id="rows" class="rows" aria-live="polite"></div>
 
-    <footer>
-    </footer>
+    <footer></footer>
+  </div>
+
+  <!-- Popup-ikkuna -->
+  <div id="confirm-popup" class="popup-backdrop" style="display:none">
+    <div class="popup">
+      <p>Poistetaanko kaikki arvotut rivit?</p>
+      <div class="popup-buttons">
+        <button id="popup-ok">Kyllä</button>
+        <button id="popup-cancel">Peruuta</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -61,6 +119,10 @@
     const btnLotto = document.getElementById('btn-lotto');
     const btnEuro = document.getElementById('btn-euro');
     const btnClear = document.getElementById('btn-clear');
+
+    const popup = document.getElementById('confirm-popup');
+    const popupOk = document.getElementById('popup-ok');
+    const popupCancel = document.getElementById('popup-cancel');
 
     function randInt(min, max){
       return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -110,9 +172,7 @@
       del.className = 'trash';
       del.setAttribute('title','Poista rivi');
       del.textContent = '✖';
-      del.addEventListener('click', ()=>{
-        row.remove();
-      });
+      del.addEventListener('click', ()=>{ row.remove(); });
       row.appendChild(del);
 
       rowsEl.prepend(row);
@@ -137,8 +197,19 @@
       }
     });
 
-    btnClear.addEventListener('click', ()=>{
-      if(confirm('Poistetaanko kaikki arvotut rivit?')) rowsEl.innerHTML = '';
+    // Oma popup Reset-painikkeelle
+    btnClear.addEventListener('click', () => {
+      popup.style.display = 'flex';
+    });
+
+    popupOk.addEventListener('click', () => {
+      rowsEl.innerHTML = '';
+      popup.style.display = 'none';
+      saveRows();
+    });
+
+    popupCancel.addEventListener('click', () => {
+      popup.style.display = 'none';
     });
 
     function saveRows(){
@@ -168,7 +239,6 @@
     observer.observe(rowsEl, {childList:true, subtree:true});
 
     loadRows();
-
   </script>
 </body>
 </html>
